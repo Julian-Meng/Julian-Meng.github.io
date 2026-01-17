@@ -1,0 +1,47 @@
+<!-- This visualization is intentionally frozen in its current form. -->
+<!-- Further complexity is possible, but not necessary. -->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Design Spiral Galaxy - Final Bright</title>
+    <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+
+    <div id="ui-container" class="glass-panel" style="pointer-events: none;">
+        <div class="avatar">
+            <img src="https://github.com/Julian-Meng.png" alt="">
+        </div>
+        <h1>Created By Julian Meng</h1>
+        <a href="https://github.com/Julian-Meng" target="_blank" style="pointer-events: auto;">HomePage</a>
+    </div>
+
+    <div id="controls-right" class="glass-panel">
+        <div class="control-label">SPEED</div>
+        <input type="range" id="speedSlider" min="0" max="3.0" step="0.1" value="0.5">
+        <div id="speed-value">0.5x</div>
+    </div>
+
+    <div id="instructions" class="glass-panel">
+        <p>Scroll to zoom, Press the left key to move.</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="./main.js">
+    </script>
+</body>
+
+</html>
