@@ -36,7 +36,7 @@ function init() {
 
     scene = new THREE.Scene();
 
-    // 雾效：稍微减弱雾的浓度，让远处的背景星也能看见
+    // 雾效
     scene.fog = new THREE.FogExp2('#000000', 0.0015);
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 500);
@@ -72,7 +72,7 @@ function init() {
     animate();
 }
 
-// --- 背景星空生成函数 (调整亮度) ---
+// --- 背景星空生成函数 ---
 function generateBackgroundStars() {
     if (bgStars) {
         bgGeometry.dispose();
@@ -81,7 +81,7 @@ function generateBackgroundStars() {
     }
 
     bgGeometry = new THREE.BufferGeometry();
-    const bgCount = 6000; // 稍微增加一点数量
+    const bgCount = 6000;
 
     const positions = new Float32Array(bgCount * 3);
     const colors = new Float32Array(bgCount * 3);
@@ -100,12 +100,12 @@ function generateBackgroundStars() {
         positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         positions[i3 + 2] = r * Math.cos(phi);
 
-        // 颜色：大幅提升亮度，降低“极暗”的比例
+        // 颜色
         const colorType = Math.random();
         let c = new THREE.Color();
 
         if (colorType > 0.8) {
-            // 蓝星 (O/B型) - 提升亮度和饱和度
+            // 蓝星 (O/B型)
             // 亮度: 0.5~0.9, 饱和度: 0.4
             c.setHSL(0.6 + Math.random() * 0.1, 0.4, Math.random() * 0.4 + 0.5);
         } else if (colorType > 0.6) {
@@ -113,8 +113,8 @@ function generateBackgroundStars() {
             // 亮度: 0.4~0.8
             c.setHSL(Math.random() * 0.1, 0.5, Math.random() * 0.4 + 0.4);
         } else {
-            // 白/灰星 - 主力背景
-            // 亮度: 0.3~0.8 (之前只有 0.1~0.5)
+            // 白/灰星
+            // 亮度: 0.3~0.8
             c.setHSL(0.6, 0.0, Math.random() * 0.5 + 0.3);
         }
 
@@ -175,7 +175,7 @@ function generateBackgroundStars() {
                         // 柔和圆点，但核心更实一点
                         float alpha = 1.0 - smoothstep(0.3, 0.5, d);
                         
-                        // 增加整体不透明度，让星星更亮 (原0.8 -> 1.0)
+                        // 增加整体不透明度，让星星更亮
                         gl_FragColor = vec4(vColor, alpha * 1.0);
                     }
                 `
@@ -383,7 +383,7 @@ function animate() {
     // 更新银河系
     if (material) material.uniforms.uTime.value += dt;
 
-    // 更新背景星空 (独立极慢时钟)
+    // 更新背景星空
     if (bgMaterial) bgMaterial.uniforms.uTime.value += dt * 0.2;
 
     renderer.render(scene, camera);
