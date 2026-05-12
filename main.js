@@ -5,6 +5,7 @@ let scene, camera, renderer;
 let material, geometry, points; // 银河系变量
 let bgMaterial, bgGeometry, bgStars; // 背景星空变量
 let timeScale = 0.5;
+const baseSpeed = 0.5;
 
 // --- 银河系参数 ---
 const params = {
@@ -15,22 +16,53 @@ const params = {
     spin: 0.8,
 
     bulgeRadius: 1.6,
-    bulgeRatio: 0.15,
-    diskRatio: 0.08,
-    haloRatio: 0.10,
-    armRatio: 0.67,
+    bulgeRatio: 0.18,
+    thinDiskRatio: 0.22,
+    thickDiskRatio: 0.12,
+    haloRatio: 0.06,
+    outerRatio: 0.05,
+
+    speedMax: 1.4,
+    speedScale: 2.2,
+    patternSpeed: 0.11,
 
     colorHot: ['#9bb0ff', '#aabfff', '#cad7ff', '#f8f7ff'],
     colorWarm: ['#ffdec0', '#ffcfa0', '#ffb075', '#ff9560'],
     colorCore: '#fffdfa',
 };
 
+const REGION = {
+    BULGE: 0,
+    THIN_DISK: 1,
+    THICK_DISK: 2,
+    ARM: 3,
+    HALO: 4,
+    OUTER: 5,
+};
+
 function init() {
     const slider = document.getElementById('speedSlider');
     const speedValueDisplay = document.getElementById('speed-value');
+    const minSpeed = 0.0;
+    const maxSpeed = 1.5;
+
+    const cores = navigator.hardwareConcurrency || 8;
+    if (window.innerWidth < 900 || cores <= 4) {
+        params.count = 80000;
+    } else if (window.innerWidth < 1200 || cores <= 8) {
+        params.count = 110000;
+    }
+
+    slider.min = String(minSpeed);
+    slider.max = String(maxSpeed);
+    slider.step = '0.1';
+    timeScale = clamp(timeScale, minSpeed, maxSpeed);
+    slider.value = String(timeScale);
+    speedValueDisplay.textContent = timeScale.toFixed(1) + 'x';
 
     slider.addEventListener('input', (e) => {
-        timeScale = parseFloat(e.target.value);
+        timeScale = clamp(parseFloat(e.target.value), minSpeed, maxSpeed);
+        e.target.value = String(timeScale);
         speedValueDisplay.textContent = timeScale.toFixed(1) + 'x';
     });
 
@@ -40,7 +72,7 @@ function init() {
     scene.fog = new THREE.FogExp2('#000000', 0.0015);
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 500);
-    camera.position.set(0, 8, 12);
+    camera.position.set(0, 6.5, 11.5);
 
     renderer = new THREE.WebGLRenderer({
         antialias: false,
@@ -50,12 +82,17 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor('#000000');
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.autoRotate = false;
+    controls.target.set(0, 0, 0);
+    controls.update();
 
     controls.maxDistance = 60;
     controls.minDistance = 0.5;
@@ -81,7 +118,7 @@ function generateBackgroundStars() {
     }
 
     bgGeometry = new THREE.BufferGeometry();
-    const bgCount = 6000;
+    const bgCount = THREE.MathUtils.clamp(Math.round(params.count * 0.035), 2500, 7000);
 
     const positions = new Float32Array(bgCount * 3);
     const colors = new Float32Array(bgCount * 3);
@@ -150,18 +187,11 @@ function generateBackgroundStars() {
 
                     void main() {
                         vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-                        
-                        // 极慢的漂移
-                        float driftX = sin(uTime * 0.1 + aPhase) * 0.5;
-                        float driftY = cos(uTime * 0.1 + aPhase * 0.5) * 0.5;
-                        float driftZ = sin(uTime * 0.05 + aPhase * 2.0) * 0.5;
-                        
-                        modelPosition.xyz += vec3(driftX, driftY, driftZ);
-
                         vec4 viewPosition = viewMatrix * modelPosition;
                         gl_Position = projectionMatrix * viewPosition;
 
-                        gl_PointSize = aSize * uPixelRatio;
+                        float twinkle = 0.85 + 0.15 * sin(uTime * 0.6 + aPhase);
+                        gl_PointSize = aSize * uPixelRatio * twinkle;
                         vColor = color;
                     }
                 `,
@@ -171,12 +201,11 @@ function generateBackgroundStars() {
                         vec2 uv = gl_PointCoord - 0.5;
                         float d = length(uv);
                         if (d > 0.5) discard;
-                        
-                        // 柔和圆点，但核心更实一点
-                        float alpha = 1.0 - smoothstep(0.3, 0.5, d);
-                        
-                        // 增加整体不透明度，让星星更亮
-                        gl_FragColor = vec4(vColor, alpha * 1.0);
+                        float core = 1.0 - smoothstep(0.0, 0.2, d);
+                        float halo = 1.0 - smoothstep(0.2, 0.5, d);
+                        float alpha = core + halo * 0.35;
+                        alpha = pow(alpha, 1.2);
+                        gl_FragColor = vec4(vColor, alpha * 0.9);
                     }
                 `
     });
@@ -185,25 +214,49 @@ function generateBackgroundStars() {
     scene.add(bgStars);
 }
 
-// --- 银河系辅助函数 ---
-function pickNaturalColor(isArmRegion, densityFactor) {
-    let isHotStar = false;
-    if (isArmRegion) {
-        const prob = 0.4 + densityFactor * 0.5;
-        isHotStar = Math.random() < prob;
-    } else {
-        isHotStar = Math.random() < 0.05;
-    }
 
-    const palette = isHotStar ? params.colorHot : params.colorWarm;
-    const hex = palette[Math.floor(Math.random() * palette.length)];
-    const color = new THREE.Color(hex);
+// --- 银河系辅助函数 ---
+function pickStarColor(region, armDensity = 0) {
+    let color;
+
+    if (region === REGION.BULGE) {
+        color = new THREE.Color(params.colorCore);
+        const warm = new THREE.Color('#ffd7b0');
+        color.lerp(warm, Math.random() * 0.35);
+    } else if (region === REGION.ARM) {
+        const hotProb = 0.45 + armDensity * 0.35;
+        const palette = Math.random() < hotProb ? params.colorHot : params.colorWarm;
+        color = new THREE.Color(palette[Math.floor(Math.random() * palette.length)]);
+    } else if (region === REGION.HALO || region === REGION.OUTER) {
+        const palette = Math.random() < 0.2 ? params.colorHot : params.colorWarm;
+        color = new THREE.Color(palette[Math.floor(Math.random() * palette.length)]);
+    } else {
+        const palette = Math.random() < 0.15 ? params.colorHot : params.colorWarm;
+        color = new THREE.Color(palette[Math.floor(Math.random() * palette.length)]);
+    }
 
     const hsl = {};
     color.getHSL(hsl);
-    hsl.l += (Math.random() - 0.5) * 0.1;
-    hsl.s += (Math.random() - 0.5) * 0.05;
-    color.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s, 0, 1), THREE.MathUtils.clamp(hsl.l, 0, 1));
+
+    if (region === REGION.HALO || region === REGION.OUTER) {
+        hsl.s *= 0.4;
+        hsl.l *= 0.7;
+    } else if (region === REGION.THICK_DISK) {
+        hsl.s *= 0.8;
+        hsl.l *= 0.85;
+    } else if (region === REGION.BULGE) {
+        hsl.s *= 0.9;
+        hsl.l += 0.08;
+    } else if (region === REGION.ARM) {
+        hsl.l += 0.05 * armDensity;
+    }
+
+    hsl.l += (Math.random() - 0.5) * 0.08;
+    color.setHSL(
+        hsl.h,
+        THREE.MathUtils.clamp(hsl.s, 0, 1),
+        THREE.MathUtils.clamp(hsl.l, 0, 1)
+    );
     return color;
 }
 
@@ -218,6 +271,20 @@ function d3_randomNormal() {
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function sampleExponential(scale, maxR) {
+    return Math.min(-Math.log(1.0 - Math.random()) * scale, maxR);
+}
+
+function sampleLuminosity() {
+    const n = d3_randomNormal();
+    const lum = Math.exp(-0.4 + 0.85 * n);
+    return THREE.MathUtils.clamp(lum, 0.12, 2.8);
+}
+
 function generateGalaxy() {
     if (points) {
         geometry.dispose();
@@ -229,9 +296,9 @@ function generateGalaxy() {
     const positions = new Float32Array(params.count * 3);
     const colors = new Float32Array(params.count * 3);
     const scales = new Float32Array(params.count * 1);
-    const motionTypes = new Float32Array(params.count * 1);
-
-    const colorCoreObj = new THREE.Color(params.colorCore);
+    const regions = new Float32Array(params.count * 1);
+    const luminosities = new Float32Array(params.count * 1);
+    const jitterPhases = new Float32Array(params.count * 1);
 
     for (let i = 0; i < params.count; i++) {
         const i3 = i * 3;
@@ -240,54 +307,70 @@ function generateGalaxy() {
         let x, y, z, r, theta;
         let color;
         let scale = Math.random();
-        let motionType = 0.0;
+        let region = REGION.THIN_DISK;
+        let armDensity = 0.0;
 
         // 1. 核球
         if (randType < params.bulgeRatio) {
-            r = Math.pow(Math.random(), 2.5) * params.bulgeRadius * 1.8;
+            region = REGION.BULGE;
+            r = Math.pow(Math.random(), 3.0) * params.bulgeRadius * 1.8;
             theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
             x = r * Math.sin(phi) * Math.cos(theta);
-            y = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+            y = r * Math.sin(phi) * Math.sin(theta) * 0.5;
             z = r * Math.cos(phi);
 
-            if (r < 0.5) {
-                color = new THREE.Color('#fffef0');
-                scale *= 2.5;
-            } else {
-                color = pickNaturalColor(false, 0);
-                color.lerp(new THREE.Color('#fff0e0'), 0.5);
-            }
+            color = pickStarColor(region, 0);
         }
         // 2. 星系晕
         else if (randType < params.bulgeRatio + params.haloRatio) {
+            region = REGION.HALO;
             r = params.radius * 0.5 + randomExp(0.5) * params.radius;
             theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
             x = r * Math.sin(phi) * Math.cos(theta);
             y = r * Math.sin(phi) * Math.sin(theta) * 0.8;
             z = r * Math.cos(phi);
-            color = pickNaturalColor(false, 0);
-            color.multiplyScalar(0.4);
-            scale *= 0.6;
-            motionType = 1.0;
+            color = pickStarColor(region, 0);
         }
-        // 3. 背景盘
-        else if (randType < params.bulgeRatio + params.haloRatio + params.diskRatio) {
-            r = params.bulgeRadius + Math.abs(d3_randomNormal()) * (params.radius * 0.6);
+        // 3. 厚盘
+        else if (randType < params.bulgeRatio + params.haloRatio + params.outerRatio) {
+            region = REGION.OUTER;
+            const rBase = params.radius * 0.95;
+            const rMax = params.radius * 1.8;
+            r = Math.min(rBase + randomExp(1.2) * params.radius * 0.6, rMax);
             theta = Math.random() * Math.PI * 2;
             x = r * Math.cos(theta);
             z = r * Math.sin(theta);
-            y = (Math.random() - 0.5) * 0.2 * (1 + r * 0.3);
-            color = pickNaturalColor(false, 0);
-            color.multiplyScalar(0.5);
-            scale *= 0.7;
+            y = d3_randomNormal() * (0.25 + r * 0.06);
+            color = pickStarColor(region, 0);
         }
-        // 4. 旋臂
+        // 4. 厚盘
+        else if (randType < params.bulgeRatio + params.haloRatio + params.outerRatio + params.thickDiskRatio) {
+            region = REGION.THICK_DISK;
+            r = sampleExponential(params.radius * 0.45, params.radius * 1.05);
+            theta = Math.random() * Math.PI * 2;
+            x = r * Math.cos(theta);
+            z = r * Math.sin(theta);
+            y = d3_randomNormal() * (0.12 + r * 0.03);
+            color = pickStarColor(region, 0);
+        }
+        // 4. 薄盘
+        else if (randType < params.bulgeRatio + params.haloRatio + params.outerRatio + params.thickDiskRatio + params.thinDiskRatio) {
+            region = REGION.THIN_DISK;
+            r = sampleExponential(params.radius * 0.38, params.radius * 1.02);
+            theta = Math.random() * Math.PI * 2;
+            x = r * Math.cos(theta);
+            z = r * Math.sin(theta);
+            y = d3_randomNormal() * (0.035 + r * 0.012);
+            color = pickStarColor(region, 0);
+        }
+        // 5. 旋臂
         else {
+            region = REGION.ARM;
             const rMin = params.bulgeRadius * 0.5;
-            const rMax = params.radius * 1.2;
+            const rMax = params.radius * 1.05;
             r = rMin + Math.pow(Math.random(), 0.8) * (rMax - rMin);
             const branchAngle = (i % params.branches) / params.branches * Math.PI * 2;
             const spiralAngle = -r * params.spin;
@@ -297,11 +380,44 @@ function generateGalaxy() {
             theta = branchAngle + spiralAngle + randomOffset;
             x = r * Math.cos(theta);
             z = r * Math.sin(theta);
-            y = (Math.random() - 0.5) * 0.2 * (1 + r * 0.2);
+            y = d3_randomNormal() * (0.03 + r * 0.012);
 
-            const armDensity = 1.0 - Math.min(Math.abs(randomOffset) / maxSpread, 1.0);
-            color = pickNaturalColor(true, armDensity);
-            if (color.b > color.r && armDensity > 0.8) scale *= 1.3;
+            armDensity = 1.0 - Math.min(Math.abs(randomOffset) / maxSpread, 1.0);
+            const armCoreMask = THREE.MathUtils.smoothstep(r, params.bulgeRadius * 0.8, params.bulgeRadius * 2.0);
+            armDensity *= armCoreMask;
+            color = pickStarColor(region, armDensity);
+        }
+
+        const edgeFadeInner = 1.0 - THREE.MathUtils.smoothstep(r, params.radius * 0.85, params.radius * 1.08);
+        const edgeFadeOuter = 1.0 - THREE.MathUtils.smoothstep(r, params.radius * 1.05, params.radius * 1.75);
+        const edgeFade = (region === REGION.HALO || region === REGION.OUTER) ? edgeFadeOuter : edgeFadeInner;
+        const coreBoost = 1.0 + 0.7 * (1.0 - THREE.MathUtils.smoothstep(r, 0.25, params.bulgeRadius * 1.4));
+
+        const baseLum = sampleLuminosity();
+        let lumScale = 1.0;
+        if (region === REGION.BULGE) lumScale = 1.25;
+        if (region === REGION.THICK_DISK) lumScale = 0.75;
+        if (region === REGION.HALO) lumScale = 0.45;
+        if (region === REGION.OUTER) lumScale = 0.35;
+        if (region === REGION.ARM) lumScale = 0.7 + 0.45 * armDensity;
+
+        if (region === REGION.BULGE || region === REGION.THIN_DISK || region === REGION.THICK_DISK) {
+            lumScale *= coreBoost;
+        }
+
+        if (region !== REGION.BULGE) {
+            lumScale *= THREE.MathUtils.clamp(edgeFade, 0.0, 1.0);
+        }
+
+        const lum = baseLum * lumScale;
+        scale = Math.sqrt(Math.max(lum, 0.001)) * (0.55 + Math.random() * 0.55);
+
+        if (region !== REGION.BULGE) {
+            scale *= 0.6 + 0.4 * THREE.MathUtils.clamp(edgeFade, 0.0, 1.0);
+        }
+
+        if (region === REGION.BULGE && r < 0.5) {
+            scale *= 1.2;
         }
 
         positions[i3] = x;
@@ -311,13 +427,17 @@ function generateGalaxy() {
         colors[i3 + 1] = color.g;
         colors[i3 + 2] = color.b;
         scales[i] = scale;
-        motionTypes[i] = motionType;
+        regions[i] = region;
+        luminosities[i] = lum;
+        jitterPhases[i] = Math.random() * Math.PI * 2;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geometry.setAttribute('aScale', new THREE.BufferAttribute(scales, 1));
-    geometry.setAttribute('aMotionType', new THREE.BufferAttribute(motionTypes, 1));
+    geometry.setAttribute('aRegion', new THREE.BufferAttribute(regions, 1));
+    geometry.setAttribute('aLum', new THREE.BufferAttribute(luminosities, 1));
+    geometry.setAttribute('aJitterPhase', new THREE.BufferAttribute(jitterPhases, 1));
 
     material = new THREE.ShaderMaterial({
         depthWrite: false,
@@ -325,38 +445,56 @@ function generateGalaxy() {
         vertexColors: true,
         uniforms: {
             uTime: { value: 0 },
-            uSize: { value: 24 * renderer.getPixelRatio() }
+            uSize: { value: 20 * renderer.getPixelRatio() },
+            uVmax: { value: params.speedMax },
+            uSpeedScale: { value: params.speedScale },
+            uPatternSpeed: { value: params.patternSpeed },
+            uJitterAmp: { value: 0.035 }
         },
         vertexShader: `
                     uniform float uTime;
                     uniform float uSize;
+                    uniform float uVmax;
+                    uniform float uSpeedScale;
+                    uniform float uPatternSpeed;
+                    uniform float uJitterAmp;
                     attribute float aScale;
-                    attribute float aMotionType; 
+                    attribute float aRegion;
+                    attribute float aLum;
+                    attribute float aJitterPhase;
                     varying vec3 vColor;
+
+                    float getOmega(float r) {
+                        float v = uVmax * (1.0 - exp(-r / uSpeedScale));
+                        return v / max(r, 0.35);
+                    }
 
                     void main() {
                         vec4 modelPosition = modelMatrix * vec4(position, 1.0);
                         float r = length(modelPosition.xz);
                         float angle = atan(modelPosition.x, modelPosition.z);
-                        
-                        float baseSpeed = 0.05;
-                        float speedMultiplier = 1.0;
-                        if (aMotionType > 0.5) {
-                            speedMultiplier = 0.05; 
-                        }
-                        float coreSpeedBoost = 1.0 + 1.0 * (1.0 - smoothstep(0.0, 2.0, r));
-                        float rotation = -uTime * baseSpeed * speedMultiplier * coreSpeedBoost;
-                        angle += rotation;
+
+                        float omega = getOmega(r);
+                        float armFactor = 1.0 - min(abs(aRegion - 3.0), 1.0);
+                        float haloFactor = 1.0 - min(min(abs(aRegion - 4.0), abs(aRegion - 5.0)), 1.0);
+
+                        float speed = mix(omega, uPatternSpeed, armFactor);
+                        speed *= mix(1.0, 0.18, haloFactor);
+                        angle += -uTime * speed;
 
                         modelPosition.x = cos(angle) * r;
                         modelPosition.z = sin(angle) * r;
 
+                        float jitter = sin(uTime * 0.6 + aJitterPhase) * uJitterAmp;
+                        modelPosition.y += jitter * (1.0 - haloFactor) * (1.0 - armFactor * 0.4);
+
                         vec4 viewPosition = viewMatrix * modelPosition;
                         gl_Position = projectionMatrix * viewPosition;
 
-                        float pointSize = uSize * aScale * (1.0 / -viewPosition.z);
-                        gl_PointSize = max(pointSize, 1.5); 
-                        vColor = color;
+                        float bloom = smoothstep(1.2, 2.2, aLum);
+                        float pointSize = uSize * aScale * (1.0 + bloom * 0.6) * (1.0 / -viewPosition.z);
+                        gl_PointSize = max(pointSize, 1.2);
+                        vColor = color * aLum;
                     }
                 `,
         fragmentShader: `
@@ -365,9 +503,11 @@ function generateGalaxy() {
                         vec2 uv = gl_PointCoord - 0.5;
                         float d = length(uv);
                         if (d > 0.5) discard;
-                        float strength = 1.0 - (d * 2.0);
-                        strength = pow(strength, 2.2); 
-                        gl_FragColor = vec4(vColor * strength, 1.0);
+                        float core = 1.0 - smoothstep(0.0, 0.25, d);
+                        float halo = 1.0 - smoothstep(0.25, 0.5, d);
+                        float strength = core + halo * 0.35;
+                        strength = pow(strength, 1.4);
+                        gl_FragColor = vec4(vColor * strength, strength);
                     }
                 `
     });
@@ -378,7 +518,7 @@ function generateGalaxy() {
 
 function animate() {
     requestAnimationFrame(animate);
-    const dt = 0.02 * timeScale;
+    const dt = 0.02 * baseSpeed * timeScale;
 
     // 更新银河系
     if (material) material.uniforms.uTime.value += dt;
