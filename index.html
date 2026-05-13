@@ -29,7 +29,7 @@
     </div>
 
     <div id="instructions" class="glass-panel">
-        <p>Scroll to zoom, Press left key to move.</p>
+        <p id="instructions-text">Scroll to zoom, press left button to move.</p>
     </div>
 
     <script type="importmap">
@@ -41,8 +41,15 @@
         }
     </script>
 
-    <script type="module" src="./main.js">
+    <script>
+        const instructionsText = document.getElementById('instructions-text');
+        if (instructionsText) {
+            const browserLanguage = (navigator.language || '').toLowerCase();
+            const isChinese = browserLanguage.startsWith('zh');
+            instructionsText.textContent = isChinese ? '滚轮缩放,左键移动' : 'Scroll to zoom, press left button to move.';
+        }
     </script>
+    <script type="module" src="./main.js"></script>
 </body>
 
 </html>
