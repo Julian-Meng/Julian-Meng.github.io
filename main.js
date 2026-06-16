@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { SliderController } from './slider-module/slider-controller.js';
 
 let scene, camera, renderer;
 let material, geometry, points; // 银河系变量
@@ -41,8 +42,6 @@ const REGION = {
 };
 
 function init() {
-    const slider = document.getElementById('speedSlider');
-    const speedValueDisplay = document.getElementById('speed-value');
     const minSpeed = 0.0;
     const maxSpeed = 1.5;
 
@@ -53,17 +52,14 @@ function init() {
         params.count = 110000;
     }
 
-    slider.min = String(minSpeed);
-    slider.max = String(maxSpeed);
-    slider.step = '0.1';
     timeScale = clamp(timeScale, minSpeed, maxSpeed);
-    slider.value = String(timeScale);
-    speedValueDisplay.textContent = timeScale.toFixed(1) + 'x';
+    const initialPercent = Math.round(((timeScale - minSpeed) / (maxSpeed - minSpeed)) * 100);
 
-    slider.addEventListener('input', (e) => {
-        timeScale = clamp(parseFloat(e.target.value), minSpeed, maxSpeed);
-        e.target.value = String(timeScale);
-        speedValueDisplay.textContent = timeScale.toFixed(1) + 'x';
+    new SliderController('slider-container', {
+        initialValue: initialPercent,
+        onValueChange: (val) => {
+            timeScale = minSpeed + (val / 100) * (maxSpeed - minSpeed);
+        }
     });
 
     scene = new THREE.Scene();
