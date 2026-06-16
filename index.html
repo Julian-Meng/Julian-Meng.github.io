@@ -88,8 +88,9 @@
         </div>
     </div>
 
-    <div id="instructions" class="glass-panel">
-        <p id="instructions-text">Scroll to zoom, press left button to move.</p>
+    <div id="instructions">
+        <p class="instructions-zh">滚轮缩放，左键移动</p>
+        <p class="instructions-en">Scroll to zoom, press left button to move.</p>
     </div>
 
     <script type="importmap">
@@ -101,12 +102,6 @@
         }
     </script>
 
-    <script>
-        const instructionsText = document.getElementById('instructions-text');
-        if (instructionsText) {
-            instructionsText.textContent = '滚轮缩放，左键移动 / Scroll to zoom, press left button to move.';
-        }
-    </script>
     <script type="module" src="./main.js"></script>
 </body>
 

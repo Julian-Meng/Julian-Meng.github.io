@@ -1,67 +1,43 @@
-# Design of Spiral Galaxy
+# Galaxy — Personal Visual Front Page
+
+An interactive spiral galaxy visualization built with **Three.js** and **WebGL2**, serving as a personal landing page.
 
 ---
 
-## About | 关于
-这是一个基于 WebGL / three.js 的交互式旋涡星系可视化页面。  
-它被设计为一个**个人主页式的视觉门面**，而不是科学仿真或前端框架示例。
+## Features
 
-页面的重点不在“功能性”，而在于结构、节奏与空间感的呈现。
+- **Spiral Galaxy** — 150K particles in a layered structure: central bulge, thin disk, thick disk, spiral arms, stellar halo, and deep-space background
+- **Fire-Animated Speed Slider** — WebGL2 flame shader with simulation / blur / composite passes, dynamically controls galaxy rotation speed
+- **Responsive** — adapts layout for desktop and mobile viewports
 
-This is an interactive spiral galaxy visualization built with WebGL and three.js.  
-It is intended to function as a **visual front page**, rather than a scientific simulation or a reusable frontend component.
+## Tech Stack
 
-The focus is on spatial structure, motion, and atmosphere — not practicality.
+- [Three.js](https://threejs.org) — scene, camera, particle rendering
+- WebGL2 — custom fire shader on the speed slider
+- Vanilla JS (ES modules) — zero build step, no framework
 
----
+## Inspiration
 
-## Inspiration | 灵感来源
+- Galaxy visual concept: [CodePen by prisoner849](https://codepen.io/prisoner849/pen/RwyzrVj)
+- Slider animation: inspired by [Claude Code](https://github.com/anthropics/claude-code)
 
-初始视觉灵感来自以下 CodePen 链接：
+Built with **Deepseek V4 Pro**.
 
-https://codepen.io/prisoner849/pen/RwyzrVj
+## Structure
 
-这个项目逐步演变，成为一个具有以下特点的分层星系模型：
-- 中心吸积盘
-- 星系旋臂
-- 恒星晕
-- 独立的深空背景
-
-The initial visual inspiration comes from the following CodePen experiment:
-
-https://codepen.io/prisoner849/pen/RwyzrVj
-
-This project gradually evolved beyond a simple spiral demo into a layered galaxy model with:
-- A central bulge
-- Spiral arms 
-- A stellar halo
-- An independent deep-space background
-
-## Acknowledgement | 致谢
-
-这个页面是在 **ChatGPT** 的广泛协助下开发的，  
-
-包括围绕以下主题的讨论：
-- 星系结构建模
-- 视觉感知与物理直觉
-- 分布函数和运动分离
-- 静态前端页面的渲染权衡
-
-ChatGPT 在整个过程中充当了技术审查者、想法合作伙伴和概念指南的角色。
-
-This page was developed with extensive assistance from **ChatGPT**,  
-
-including discussions around:
-- Galaxy structure modeling
-- Visual perception vs. physical intuition
-- Distribution functions and motion separation
-- Rendering trade-offs for a static front page
-
-ChatGPT acted as a technical reviewer, idea sparring partner, and conceptual guide throughout the process.
+```
+.
+├── galaxy/galaxy.js            # Galaxy generation & shaders
+├── slider-module/              # Fire-animated slider
+│   ├── shaders.js
+│   ├── slider-controller.js
+│   ├── slider.css
+│   └── webgl-fire.js
+├── index.html                  # Entry point
+├── main.js                     # Scene setup & animation loop
+└── main.css                    # Global styles
+```
 
 ---
 
-## License
-
-WTFPL  
-Do what the fuck you want.
+[中文文档](README_zh-CN.md) | [License (WTFPL)](LICENSE)

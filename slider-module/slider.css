@@ -256,3 +256,12 @@
   transform-origin: bottom right;
 }
 
+@media (max-width: 768px), (orientation: portrait) and (max-width: 1024px) {
+  #slider-container {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%) scale(0.75);
+    transform-origin: bottom center;
+  }
+}
+

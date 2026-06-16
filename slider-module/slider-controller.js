@@ -39,7 +39,8 @@ export class SliderController {
     const isFull = this.sliderValue === 100;
     
     let statusLabel = 'Ultra Fast';
-    if (this.sliderValue < 33) statusLabel = 'Slow';
+    if (this.sliderValue === 0) statusLabel = 'Stop';
+    else if (this.sliderValue < 33) statusLabel = 'Slow';
     else if (this.sliderValue < 66) statusLabel = 'Normal';
     else if (this.sliderValue < this.threshold) statusLabel = 'Fast';
     

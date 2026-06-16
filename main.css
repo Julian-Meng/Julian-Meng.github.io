@@ -78,12 +78,31 @@ h1 {
     padding: 10px 16px;
     pointer-events: none;
     z-index: 10;
+    background: transparent;
+    border: none;
 }
 
 #instructions p {
     margin: 0;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.75);
-    letter-spacing: 0.4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.3px;
     font-weight: 500;
+    line-height: 1.5;
+}
+
+.instructions-zh {
+    padding-bottom: 2px;
+}
+
+.instructions-en {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+}
+
+@media (max-width: 768px), (orientation: portrait) and (max-width: 1024px) {
+    #instructions {
+        display: none;
+    }
 }
