@@ -59,38 +59,50 @@
         <a href="https://github.com/Julian-Meng" target="_blank" style="pointer-events: auto;">HomePage</a>
     </div>
 
-    <div id="slider-container" class="card-shadow">
-        <div class="card" style="clip-path: url(#squircle-uid);">
-            <div class="header">
-                <div class="header-left">
-                    <span class="label-text">Speed</span>
-                    <span class="status-text">Normal</span>
-                </div>
-            </div>
+    <div id="slider-wrapper" class="collapsed">
+        <button id="slider-toggle" class="slider-toggle" aria-expanded="false" aria-label="展开速度滑块">
+            <svg class="toggle-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="8 20 16 12 8 4" />
+            </svg>
+        </button>
 
-            <div class="scale-labels">
-                <span>Slower</span>
-                <span>Faster</span>
-            </div>
-
-            <div class="track-wrapper" style="clip-path: url(#squircle-track-uid);">
-                <div class="track-bg"></div>
-                <div class="dots-layer">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
+        <div id="slider-container" class="card-shadow">
+            <div class="card" style="clip-path: url(#squircle-uid);">
+                <div class="header">
+                    <div class="header-left">
+                        <span class="label-text">Speed</span>
+                        <span class="status-text">Normal</span>
+                    </div>
                 </div>
-                <canvas></canvas>
-                <input type="range" min="0" max="100" value="33" />
+
+                <div class="scale-labels">
+                    <span>Slower</span>
+                    <span>Faster</span>
+                </div>
+
+                <div class="track-wrapper" style="clip-path: url(#squircle-track-uid);">
+                    <div class="track-bg"></div>
+                    <div class="dots-layer">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <canvas></canvas>
+                    <input type="range" min="0" max="100" value="33" />
+                </div>
             </div>
         </div>
     </div>
 
     <div id="instructions">
-        <p class="instructions-zh">滚轮缩放，左键移动</p>
-        <p class="instructions-en">Scroll to zoom, press left button to move.</p>
+        <button class="help-trigger" aria-label="操作提示">?</button>
+        <div class="instructions-tooltip">
+            <p class="instructions-zh">滚轮缩放，左键移动</p>
+            <p class="instructions-en">Scroll to zoom, press left button to move.</p>
+        </div>
     </div>
 
     <script type="importmap">

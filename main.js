@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { SliderController } from './slider-module/slider-controller.js';
+import { initSliderToggle } from './slider-module/slider-toggle.js';
 import { params, generateGalaxy, generateBackgroundStars } from './galaxy/galaxy.js';
 
 let scene, camera, renderer;
@@ -33,6 +34,8 @@ function init() {
             timeScale = minSpeed + (val / 100) * (maxSpeed - minSpeed);
         }
     });
+
+    initSliderToggle();
 
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2('#000000', 0.0015);
